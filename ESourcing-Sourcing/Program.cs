@@ -1,11 +1,17 @@
+using System.Configuration;
 using ESourcing_Sourcing.DataAccess.Abstract;
 using ESourcing_Sourcing.DataAccess.Concrete;
 using ESourcing_Sourcing.Repositories.Abstract;
 using ESourcing_Sourcing.Repositories.Concrete;
 using ESourcing_Sourcing.Settings.DatabaseSettings;
+using EventBusRabbitMQ;
+using EventBusRabbitMQ.Producer;
 using Microsoft.Extensions.Options;
+using RabbitMQ.Client;
+using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Add services to the container.
 
@@ -15,9 +21,26 @@ builder.Services.Configure<SourcingDatabaseSettings>(
 builder.Services.AddSingleton<ISourcingDatabaseSettings>(sp =>
     sp.GetRequiredService<IOptions<SourcingDatabaseSettings>>().Value);
 
+
+builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddTransient<ISourcingContext, SourcingContext>();
 builder.Services.AddTransient<IAuctionRepository, AuctionRepository>();
 builder.Services.AddTransient<IBidRepository, BidRepository>();
+builder.Services.AddSingleton<IRabbitMqPersistentConnection>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<DefaultRabbitMqPersistentConnection>>();
+   
+    var factory = new ConnectionFactory()
+    {
+        HostName = "localhost"
+    };
+    factory.UserName = "guest";
+    factory.Password = "guest";
+
+    var retryCount = 5;
+    return new DefaultRabbitMqPersistentConnection(factory, retryCount, logger);
+});
+builder.Services.AddSingleton<EventBusRabbitMQProducer>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
