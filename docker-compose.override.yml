@@ -5,7 +5,7 @@ services:
     container_name: sourcingdb
     restart: always
     volumes:
-        - ${WEBAPP_STORAGE_HOME}/site:/data/db}
+        - ${APPDATA}/site:/data/db}
     ports:
         -  "27017:27017"
 
@@ -25,7 +25,7 @@ services:
         - ACCEPT_EULA="Y""
 
        
-  esourcing-products:
+  esourcing.product:
     container_name: esourcingproducts
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -38,8 +38,8 @@ services:
     volumes:
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/http:ro
 
-      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
-  esourcing-sourcing:
+      - ${APPDATA}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+  esourcing.sourcing:
     container_name: esourcingsourcing
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -53,7 +53,7 @@ services:
     volumes:
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/http:ro
 
-      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - ${APPDATA}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
 
   esourcing.order:
         container_name: esourcingorder
@@ -65,7 +65,21 @@ services:
          - sourcingsqldb
          - rabbitmq
         volumes:
-          - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
-          - ${HOME}/.aspnet/https:/root/.aspnet/https/
+          - ${APPDATA}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+          - ${APPDATA}/.aspnet/https:/root/.aspnet/https/
         ports:
           - "8002:80"
+    
+  esourcing.apigateway:
+        container_name: esourcingapigateway
+        environment:
+          - ASPNETCORE_ENVIRONMENT=Development
+        depends_on:
+          - esourcing.product
+          - esourcing.sourcing
+          - esourcing.order
+        ports:
+          - "5000:80"
+        volumes:
+          - ${APPDATA}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+          - ${APPDATA}/.aspnet/https:/root/.aspnet/https/

@@ -10,12 +10,12 @@ services:
     sourcingsqldb:
         image: mcr.microsoft.com/mssql/server
     
-    esourcing-products:
+    esourcing.product:
         image: ${DOCKER_REGISTRY-}esourcingproducts
         build:
             context: .
             dockerfile: ESourcing-Products/Dockerfile
-    esourcing-sourcing:
+    esourcing.sourcing:
          image: ${DOCKER_REGISTRY-}esourcingsourcing
          build:
             context: .
@@ -28,3 +28,10 @@ services:
            context: .
            dockerfile: ESourcing.Order/Dockerfile
 
+    
+
+    esourcing.apigateway:
+        image: ${DOCKER_REGISTRY-}esourcingapigateway
+        build:
+            context: .
+            dockerfile: ESourcing.APIGateway/Dockerfile
