@@ -16,13 +16,15 @@ namespace EventBusRabbitMQ
     public class DefaultRabbitMqPersistentConnection:IRabbitMqPersistentConnection
     {
         private readonly IConnectionFactory _connectionFactory;
-        private  IConnection _connection;
+        private IConnection _connection;
         private readonly int _retryCount;
         private readonly ILogger<DefaultRabbitMqPersistentConnection> _logger;
         private bool _disposed;
 
-
-        public DefaultRabbitMqPersistentConnection(IConnectionFactory connectionFactory, int retryCount, ILogger<DefaultRabbitMqPersistentConnection> logger)
+        public DefaultRabbitMqPersistentConnection(
+            IConnectionFactory connectionFactory,
+            int retryCount,
+            ILogger<DefaultRabbitMqPersistentConnection> logger)
         {
             _connectionFactory = connectionFactory;
             _retryCount = retryCount;
@@ -33,23 +35,23 @@ namespace EventBusRabbitMQ
         {
             get
             {
-                return _connection != null && _connection.IsOpen && _disposed;
+                return _connection != null && _connection.IsOpen && !_disposed;
             }
         }
-     
+
         public bool TryConnect()
         {
             _logger.LogInformation("RabbitMQ Client is trying to connect");
-            var policy = RetryPolicy.Handle<SocketException>().Or<BrokerUnreachableException>().WaitAndRetry(
-                _retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                (ex, time) =>
+
+            var policy = RetryPolicy.Handle<SocketException>()
+                .Or<BrokerUnreachableException>()
+                .WaitAndRetry(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
                 {
                     _logger.LogWarning(ex, "RabbitMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
                 });
 
-            policy.Execute(() =>
-            {
-                _connection =_connectionFactory.CreateConnection();
+            policy.Execute(() => {
+                _connection = _connectionFactory.CreateConnection();
             });
 
             if (IsConnected)
@@ -58,13 +60,14 @@ namespace EventBusRabbitMQ
                 _connection.CallbackException += OnCallbackException;
                 _connection.ConnectionBlocked += OnConnectionBlocked;
 
-                _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{Hostname}' and is subsribed to failure events", _connection.Endpoint.HostName);
+                _logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.Endpoint.HostName);
 
                 return true;
             }
             else
             {
-                _logger.LogCritical("FATAL ERROR : RabbitMQ connections could not be created and opened");
+                _logger.LogCritical("FATAL ERROR: RabbitMQ connections could not be created and opened");
+
                 return false;
             }
         }
@@ -77,6 +80,7 @@ namespace EventBusRabbitMQ
 
             TryConnect();
         }
+
         void OnCallbackException(object sender, CallbackExceptionEventArgs e)
         {
             if (_disposed) return;
@@ -108,20 +112,18 @@ namespace EventBusRabbitMQ
         public void Dispose()
         {
             if (_disposed) return;
-            
+
             _disposed = true;
 
             try
             {
                 _connection.Dispose();
             }
-            catch (IOException e)
+            catch (IOException ex)
             {
-                _logger.LogCritical(e.ToString());
+                _logger.LogCritical(ex.ToString());
             }
-
         }
-
 
     }
 }

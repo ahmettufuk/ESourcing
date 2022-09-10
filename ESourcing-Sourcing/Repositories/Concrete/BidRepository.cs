@@ -21,7 +21,9 @@ namespace ESourcing_Sourcing.Repositories.Concrete
 
         public async Task<List<Bid>> GetBidByAuctionId(string id)
         {
-            var bids=await _context.Bids.Find(p => p.AuctionId == id).ToListAsync();
+            var filter = Builders<Bid>.Filter.Eq(a => a.AuctionId, id);
+            var bids=await _context.Bids.Find(filter).ToListAsync();
+
             return  bids.OrderByDescending(p => p.CreatedAt).GroupBy(p => p.SellerUserName).Select(p => new Bid
             {
                 AuctionId = p.FirstOrDefault().AuctionId,

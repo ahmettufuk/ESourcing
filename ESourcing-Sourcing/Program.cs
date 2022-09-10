@@ -26,21 +26,32 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddTransient<ISourcingContext, SourcingContext>();
 builder.Services.AddTransient<IAuctionRepository, AuctionRepository>();
 builder.Services.AddTransient<IBidRepository, BidRepository>();
+
 builder.Services.AddSingleton<IRabbitMqPersistentConnection>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<DefaultRabbitMqPersistentConnection>>();
    
     var factory = new ConnectionFactory()
     {
-        HostName = "localhost"
+        HostName = builder.Configuration["EventBus:HostName"]
     };
-    factory.UserName = "guest";
-    factory.Password = "guest";
-
+    if (!string.IsNullOrWhiteSpace(builder.Configuration["EventBus:UserName"]))
+    {
+        factory.UserName = builder.Configuration["EventBus:UserName"];
+    }
+    if (!string.IsNullOrWhiteSpace(builder.Configuration["EventBus:Password"]))
+    {
+        factory.UserName = builder.Configuration["EventBus:Password"];
+    }
     var retryCount = 5;
+    if (!string.IsNullOrWhiteSpace(builder.Configuration["EventBus:RetryCount"]))
+    {
+        retryCount =int.Parse(builder.Configuration["EventBus:RetryCount"]);
+    }
     return new DefaultRabbitMqPersistentConnection(factory, retryCount, logger);
 });
 builder.Services.AddSingleton<EventBusRabbitMQProducer>();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

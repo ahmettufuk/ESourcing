@@ -17,11 +17,12 @@ namespace EventBusRabbitMQ.Producer
 {
     public class EventBusRabbitMQProducer
     {
+
         private readonly IRabbitMqPersistentConnection _persistentConnection;
         private readonly ILogger<EventBusRabbitMQProducer> _logger;
         private readonly int _retryCount;
 
-        public EventBusRabbitMQProducer(IRabbitMqPersistentConnection persistentConnection, ILogger<EventBusRabbitMQProducer> logger, int retryCount=5)
+        public EventBusRabbitMQProducer(IRabbitMqPersistentConnection persistentConnection, ILogger<EventBusRabbitMQProducer> logger, int retryCount = 5)
         {
             _persistentConnection = persistentConnection;
             _logger = logger;
@@ -35,19 +36,19 @@ namespace EventBusRabbitMQ.Producer
                 _persistentConnection.TryConnect();
             }
 
-            var policy = RetryPolicy.Handle<SocketException>().Or<BrokerUnreachableException>().WaitAndRetry(
-                _retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                (ex, time) =>
-                {
-                    _logger.LogWarning(ex, "RabbitMQ Client could not connect after {EventID}s ({ExceptionMessage})", $"{@event.RequestId}", time.TotalSeconds);
-                });
-
+            var policy = RetryPolicy.Handle<BrokerUnreachableException>()
+            .Or<SocketException>()
+            .WaitAndRetry(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+            {
+                _logger.LogWarning(ex, "Could not publish event: {EventId} after {Timeout}s ({ExceptionMessage})", @event.RequestId, $"{time.TotalSeconds:n1}", ex.Message);
+            });
 
             using (var channel = _persistentConnection.CreateModel())
             {
                 channel.QueueDeclare(queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
                 var message = JsonConvert.SerializeObject(@event);
                 var body = Encoding.UTF8.GetBytes(message);
+
                 policy.Execute(() =>
                 {
                     IBasicProperties properties = channel.CreateBasicProperties();
@@ -69,7 +70,6 @@ namespace EventBusRabbitMQ.Producer
                         //implement ack handle
                     };
                 });
-
             }
         }
 

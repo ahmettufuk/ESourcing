@@ -35,7 +35,9 @@ namespace ESourcing.Order.Controllers
 
             return Ok(orders);
         }
+
         [HttpPost]
+
         public async Task<ActionResult<OrderResponses>> OrderCreate([FromBody] OrderCreateCommand command)
         {
             var result = await _mediator.Send(command);
